@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -74,17 +76,30 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 env = environ.Env()
-environ.Env.read_env()
+env = environ.Env()
+# explicitly read the .env file at project root
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    environ.Env.read_env(str(env_file))
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': env('MYSQL_DB', default='hennepin_db'),
         'USER': env('MYSQL_USER', default='hennepin_user'),
-        'PASSWORD': env('MYSQL_PASSWORD', default='change_this_password'),
+        'PASSWORD': env('MYSQL_PASSWORD', default='password'),
         'HOST': env('MYSQL_HOST', default='127.0.0.1'),
         'PORT': env('MYSQL_PORT', default='3306'),
     }
+}
+
+# Development-friendly DRF settings (allows unauthenticated POST for quick testing)
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+    # remove session auth so CSRF doesn't block curl POSTs during dev
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
 }
 
 
