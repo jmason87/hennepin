@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -72,10 +73,17 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+env = environ.Env()
+environ.Env.read_env()
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': env('MYSQL_DB', default='hennepin_db'),
+        'USER': env('MYSQL_USER', default='hennepin_user'),
+        'PASSWORD': env('MYSQL_PASSWORD', default='change_this_password'),
+        'HOST': env('MYSQL_HOST', default='127.0.0.1'),
+        'PORT': env('MYSQL_PORT', default='3306'),
     }
 }
 
