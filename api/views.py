@@ -7,8 +7,7 @@ class ItemList(generics.ListAPIView):
     queryset = Item.objects.order_by('created_at')
     serializer_class = ItemSerializer
 
-    def get(self, request, *args, **kwargs):
-        # Custom GET logic here
+    def get(self):
         items = self.get_queryset()
         serializer = self.get_serializer(items, many=True)
         return Response(serializer.data)
@@ -17,8 +16,7 @@ class ItemCreate(generics.CreateAPIView):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
 
-    def post(self, request, *args, **kwargs):
-        # Custom POST logic here
+    def post(self, request):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
