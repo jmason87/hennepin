@@ -8,6 +8,8 @@ django = "*"
 mysqlclient = "*"
 django-environ = "*"
 djangorestframework = "*"
+pytest = "*"
+pytest-django = "*"
 
 [dev-packages]
 
