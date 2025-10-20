@@ -93,6 +93,16 @@ DATABASES = {
     }
 }
 
+# Allow CI or local overrides to use a lightweight SQLite database. Set the
+# environment variable CI_SQLITE=true (or USE_SQLITE=true) to enable.
+if env.bool('CI_SQLITE', default=False) or env.bool('USE_SQLITE', default=False):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': str(BASE_DIR / 'ci.sqlite3'),
+        }
+    }
+
 # Development-friendly DRF settings (allows unauthenticated POST for quick testing)
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
