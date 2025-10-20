@@ -26,11 +26,15 @@ jobs:
         python -m pip install --upgrade pip
         if [ -f Pipfile ]; then
           pip install pipenv
-          # Use pipenv to install; Pipfile exists in this repo.
-          pipenv install --dev --skip-lock
+          if [ -f Pipfile.lock ]; then
+            # Use a locked, deterministic install when Pipfile.lock exists
+            pipenv sync --dev
+          else
+            pipenv install --dev --skip-lock
+          fi
         else
           pip install -r requirements.txt
         fi
     - name: Run Tests
       run: |
-        python manage.py test
+        pipenv run pytest
