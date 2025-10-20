@@ -1,40 +1,40 @@
 import pytest
 from rest_framework import status
-from api.models import Item
+from api.models import User
 
 @pytest.mark.django_db
-class TestItemViewSet:
+class TestUserViewSet:
     
-    def test_create_item(self, api_client):
-        data = {"name": "New Item", "description": "New Description"}
-        response = api_client.post("/api/items/", data)
+    def test_create_user(self, api_client):
+        data = {"username": "NewUser"}
+        response = api_client.post("/api/users/", data)
         
         assert response.status_code == status.HTTP_201_CREATED
-        assert Item.objects.count() == 1
-        assert Item.objects.first().name == "New Item"
+        assert User.objects.count() == 1
+        assert User.objects.first().username == "NewUser"
     
-    def test_list_items(self, api_client, sample_item):
-        response = api_client.get("/api/items/")
+    def test_list_users(self, api_client, sample_user):
+        response = api_client.get("/api/users/")
         
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
     
-    def test_retrieve_item(self, api_client, sample_item):
-        response = api_client.get(f"/api/items/{sample_item.id}/")
+    def test_retrieve_user(self, api_client, sample_user):
+        response = api_client.get(f"/api/users/{sample_user.id}/")
         
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["name"] == sample_item.name
+        assert response.data["username"] == sample_user.username
     
-    def test_update_item(self, api_client, sample_item):
-        data = {"name": "Updated Item", "description": "Updated Description"}
-        response = api_client.put(f"/api/items/{sample_item.id}/", data)
+    def test_update_user(self, api_client, sample_user):
+        data = {"username": "UpdatedUser"}
+        response = api_client.put(f"/api/users/{sample_user.id}/", data)
         
         assert response.status_code == status.HTTP_200_OK
-        sample_item.refresh_from_db()
-        assert sample_item.name == "Updated Item"
+        sample_user.refresh_from_db()
+        assert sample_user.username == "UpdatedUser"
     
-    def test_delete_item(self, api_client, sample_item):
-        response = api_client.delete(f"/api/items/{sample_item.id}/")
+    def test_delete_user(self, api_client, sample_user):
+        response = api_client.delete(f"/api/users/{sample_user.id}/")
         
         assert response.status_code == status.HTTP_204_NO_CONTENT
-        assert Item.objects.count() == 0
+        assert User.objects.count() == 0

@@ -1,15 +1,16 @@
 from rest_framework import generics
-from .models import Item
-from .serializers import ItemSerializer
+from rest_framework.permissions import IsAuthenticated
+from .models import User
+from .serializers import UserSerializer
 
+class UserList(generics.ListCreateAPIView):
+    """List all Users or create a new User."""
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    # permission_classes = [IsAuthenticated]  # Add later when auth is ready
 
-class ItemList(generics.ListCreateAPIView):
-    """List all items or create a new item."""
-    queryset = Item.objects.all()
-    serializer_class = ItemSerializer
-
-
-class ItemDetail(generics.RetrieveUpdateDestroyAPIView):
-    """Retrieve, update or delete an item."""
-    queryset = Item.objects.all()
-    serializer_class = ItemSerializer
+class UserDetail(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update or delete a User."""
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    # permission_classes = [IsAuthenticated]  # Add later

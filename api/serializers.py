@@ -1,8 +1,11 @@
 from rest_framework import serializers
-from .models import Item
+from .models import User
 
-class ItemSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Item
-        fields = ['id', 'name', 'description', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        model = User
+        fields = ['id', 'username', 'email', 'karma', 'avatar_url', 'date_joined']
+        read_only_fields = ['id', 'date_joined', 'karma']
+        extra_kwargs = {
+            'password': {'write_only': True}  # Never return password in response
+        }
