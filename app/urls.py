@@ -19,5 +19,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/users/', include('api.urls')),  # GET/POST at /api/items/
+    path('api/', include('api.urls')),
 ]
