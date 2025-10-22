@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, Community
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -9,3 +9,14 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'password': {'write_only': True}  # Never return password in response
         }
+
+class CommunitySerializer(serializers.ModelSerializer):
+    creator = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    # Allow posting an existing user's PK when auth isn't available yet.
+    # Clients can POST {"creator": 1, "name": "...", "description": "..."}
+    creator = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+
+    class Meta:
+        model = Community
+        fields = ['id', 'creator', 'name', 'description', 'subscriber_count', 'created_at', 'updated_at', 'deleted_at']
+        read_only_fields = ['id', 'subscriber_count', 'created_at', 'updated_at', 'deleted_at']
