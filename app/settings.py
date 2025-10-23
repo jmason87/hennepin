@@ -76,7 +76,6 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 env = environ.Env()
-env = environ.Env()
 # explicitly read the .env file at project root
 env_file = BASE_DIR / '.env'
 if env_file.exists():
