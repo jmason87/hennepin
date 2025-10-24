@@ -179,3 +179,35 @@ class TestCommentViewSet:
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Comment.objects.count() == 0
+
+
+@pytest.mark.django_db
+class TestRegistration:
+    def test_register_success_returns_tokens(self, api_client):
+        payload = {
+            "username": "alice",
+            "email": "alice@example.com",
+            "password": "Str0ng!Pass123",
+            "password2": "Str0ng!Pass123",
+        }
+        resp = api_client.post("/api/auth/register/", payload, format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.content
+        data = resp.data
+        # response shape
+        assert "user" in data and "access" in data and "refresh" in data
+        assert data["user"]["username"] == "alice"
+        # user actually exists
+        assert User.objects.filter(username="alice").exists()
+
+    def test_register_mismatched_passwords(self, api_client):
+        payload = {
+            "username": "bob",
+            "email": "bob@example.com",
+            "password": "Str0ng!Pass123",
+            "password2": "Different!Pass123",
+        }
+        resp = api_client.post("/api/auth/register/", payload, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "password2" in resp.data
