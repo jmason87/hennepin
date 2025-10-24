@@ -8,6 +8,7 @@ from .views import (
     PostDetail,
     CommentList,
     CommentDetail,
+    RegisterView,
 )
 
 app_name = 'api'
@@ -21,4 +22,5 @@ urlpatterns = [
     path('posts/<int:pk>/', PostDetail.as_view(), name='post-detail'),
     path('comments/', CommentList.as_view(), name='comment-list'),
     path('comments/<int:pk>/', CommentDetail.as_view(), name='comment-detail'),
+    path("auth/register/", RegisterView.as_view(), name="auth_register"),
 ]
