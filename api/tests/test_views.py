@@ -1,6 +1,6 @@
 import pytest
 from rest_framework import status
-from api.models import User, Community
+from api.models import User, Community, Post, Comment
 
 @pytest.mark.django_db
 class TestUserViewSet:
@@ -81,3 +81,100 @@ class TestCommunityViewSet:
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Community.objects.count() == 0
+
+
+@pytest.mark.django_db
+class TestPostViewSet:
+    def test_create_post(self, api_client, sample_user):
+        c = Community.objects.create(creator=sample_user, name="PostComm", description="desc")
+        data = {"user": sample_user.id, "community": c.id, "title": "Hello", "content": "body", "post_type": "text"}
+        response = api_client.post("/api/posts/", data)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert Post.objects.count() == 1
+        p = Post.objects.first()
+        assert p.title == "Hello"
+
+    def test_list_posts(self, api_client, sample_user):
+        c = Community.objects.create(creator=sample_user, name="PostComm", description="desc")
+        Post.objects.create(user=sample_user, community=c, title="T", content="body", post_type="text")
+        response = api_client.get("/api/posts/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+
+    def test_retrieve_post(self, api_client, sample_user):
+        c = Community.objects.create(creator=sample_user, name="PostComm", description="desc")
+        p = Post.objects.create(user=sample_user, community=c, title="T", content="body", post_type="text")
+        response = api_client.get(f"/api/posts/{p.id}/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["title"] == p.title
+
+    def test_update_post(self, api_client, sample_user):
+        c = Community.objects.create(creator=sample_user, name="PostComm", description="desc")
+        p = Post.objects.create(user=sample_user, community=c, title="Old", content="body", post_type="text")
+        data = {"user": sample_user.id, "community": c.id, "title": "New", "content": "body", "post_type": "text"}
+        response = api_client.put(f"/api/posts/{p.id}/", data)
+
+        assert response.status_code == status.HTTP_200_OK
+        p.refresh_from_db()
+        assert p.title == "New"
+
+    def test_delete_post(self, api_client, sample_user):
+        c = Community.objects.create(creator=sample_user, name="PostComm", description="desc")
+        p = Post.objects.create(user=sample_user, community=c, title="ToDel", content="body", post_type="text")
+        response = api_client.delete(f"/api/posts/{p.id}/")
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert Post.objects.count() == 0
+
+
+# @pytest.mark.django_db
+# class TestCommentViewSet:
+#     def test_create_comment(self, api_client, sample_user):
+#         c = Community.objects.create(creator=sample_user, name="ComComm", description="desc")
+#         p = Post.objects.create(user=sample_user, community=c, title="T", content="body", post_type="text")
+#         data = {"user": sample_user.id, "post": p.id, "content": "hi"}
+#         response = api_client.post("/api/comments/", data)
+
+#         assert response.status_code == status.HTTP_201_CREATED
+#         assert Comment.objects.count() == 1
+
+#     def test_list_comments(self, api_client, sample_user):
+#         c = Community.objects.create(creator=sample_user, name="ComComm", description="desc")
+#         p = Post.objects.create(user=sample_user, community=c, title="T", content="body", post_type="text")
+#         Comment.objects.create(user=sample_user, post=p, content="hello")
+#         response = api_client.get("/api/comments/")
+
+#         assert response.status_code == status.HTTP_200_OK
+#         assert len(response.data) == 1
+
+#     def test_retrieve_comment(self, api_client, sample_user):
+#         c = Community.objects.create(creator=sample_user, name="ComComm", description="desc")
+#         p = Post.objects.create(user=sample_user, community=c, title="T", content="body", post_type="text")
+#         com = Comment.objects.create(user=sample_user, post=p, content="hello")
+#         response = api_client.get(f"/api/comments/{com.id}/")
+
+#         assert response.status_code == status.HTTP_200_OK
+#         assert response.data["content"] == com.content
+
+#     def test_update_comment(self, api_client, sample_user):
+#         c = Community.objects.create(creator=sample_user, name="ComComm", description="desc")
+#         p = Post.objects.create(user=sample_user, community=c, title="T", content="body", post_type="text")
+#         com = Comment.objects.create(user=sample_user, post=p, content="old")
+#         data = {"user": sample_user.id, "post": p.id, "content": "new"}
+#         response = api_client.put(f"/api/comments/{com.id}/", data)
+
+#         assert response.status_code == status.HTTP_200_OK
+#         com.refresh_from_db()
+#         assert com.content == "new"
+
+#     def test_delete_comment(self, api_client, sample_user):
+#         c = Community.objects.create(creator=sample_user, name="ComComm", description="desc")
+#         p = Post.objects.create(user=sample_user, community=c, title="T", content="body", post_type="text")
+#         com = Comment.objects.create(user=sample_user, post=p, content="to del")
+#         response = api_client.delete(f"/api/comments/{com.id}/")
+
+#         assert response.status_code == status.HTTP_204_NO_CONTENT
+#         assert Comment.objects.count() == 0
