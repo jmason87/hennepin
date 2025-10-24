@@ -12,13 +12,13 @@ class UserList(generics.ListCreateAPIView):
     """List all Users or create a new User."""
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    # permission_classes = [IsAuthenticated]  # Add later when auth is ready
+    permission_classes = [IsAuthenticated]
 
 class UserDetail(generics.RetrieveUpdateDestroyAPIView):
     """Retrieve, update or delete a User."""
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    # permission_classes = [IsAuthenticated]  # Add later
+    permission_classes = [IsAuthenticated]
 
 class CommunityList(generics.ListCreateAPIView):
     queryset = Community.objects.all()
