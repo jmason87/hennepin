@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.log
+.pytest_cache/
+.mypy_cache/
+.venv/
+.env
+.env.*
+.git/
+.github/
+.vscode/
+db.sqlite3
+*.sqlite3
+Dockerfile*
+docker-compose*.yml
+node_modules/
