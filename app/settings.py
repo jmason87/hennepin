@@ -104,6 +104,10 @@ if env.bool('CI_SQLITE', default=False) or env.bool('USE_SQLITE', default=False)
         }
     }
 
+    # Allow overriding DEBUG and ALLOWED_HOSTS via environment for containerized runs
+    DEBUG = env.bool('DJANGO_DEBUG', default=DEBUG)
+    ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=['*'])
+
 # Development-friendly DRF settings (allows unauthenticated POST for quick testing)
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
