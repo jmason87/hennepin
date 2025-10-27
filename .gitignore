@@ -15,3 +15,48 @@ db.sqlite3-journal
 
 # Environment variables
 .env
+
+# ...existing code...
+
+# Pipenv virtualenvs
+.venv/
+
+# SQLite used in CI/local override
+ci.sqlite3
+ci.sqlite3-journal
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Type checkers / linters
+.mypy_cache/
+.pytype/
+.ruff_cache/
+
+# Packaging/build
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# IDE/editor
+.idea/
+.DS_Store
+Thumbs.db
+
+# Env tools
+.env.local
+.env.*.local
+.envrc
+.direnv/
+
+# Django collectstatic / uploads (if configured)
+staticfiles/
+media/
