@@ -67,13 +67,18 @@ class CommunitySerializer(serializers.ModelSerializer):
         return super().create(validated_data)
     
 class PostSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(read_only=True)
-    community = serializers.PrimaryKeyRelatedField(queryset=Community.objects.all())
+    user = UserSerializer(read_only=True)
+    community = CommunitySerializer(read_only=True)
+    community_id = serializers.PrimaryKeyRelatedField(
+        queryset=Community.objects.all(),
+        source='community',
+        write_only=True
+    )
 
     class Meta:
         model = Post
-        fields = ['id', 'user', 'community', 'title', 'content', 'post_type', 'vote_count', 'comment_count', 'created_at', 'updated_at', 'deleted_at']
-        read_only_fields = ['id', 'user', 'vote_count', 'comment_count', 'created_at', 'updated_at', 'deleted_at']
+        fields = ['id', 'user', 'community', 'community_id', 'title', 'content', 'post_type', 'vote_count', 'comment_count', 'created_at', 'updated_at', 'deleted_at']
+        read_only_fields = ['id', 'user', 'community', 'vote_count', 'comment_count', 'created_at', 'updated_at', 'deleted_at']
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
