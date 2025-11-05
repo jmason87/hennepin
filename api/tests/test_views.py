@@ -1,6 +1,6 @@
 import pytest
 from rest_framework import status
-from api.models import User, Community, Post, Comment, PostVote
+from api.models import User, Community, Post, Comment, PostVote, Subscription
 
 @pytest.mark.django_db
 class TestUserViewSet:
@@ -83,6 +83,74 @@ class TestCommunityViewSet:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Community.objects.count() == 0
 
+    def test_subscribe_to_community(self, auth_client, sample_user):
+        """Test subscribing to a community"""
+        c = Community.objects.create(creator=sample_user, name="SubComm", description="desc")
+        
+        response = auth_client.post(f"/api/communities/{c.id}/subscribe/")
+        
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["message"] == "Subscribed"
+        assert response.data["subscriber_count"] == 1
+        assert response.data["is_subscribed"] is True
+        
+        c.refresh_from_db()
+        assert c.subscriber_count == 1
+        assert Subscription.objects.filter(user=sample_user, community=c).exists()
+
+    def test_subscribe_already_subscribed(self, auth_client, sample_user):
+        """Test subscribing when already subscribed"""
+        c = Community.objects.create(creator=sample_user, name="SubComm", description="desc")
+        Subscription.objects.create(user=sample_user, community=c)
+        c.subscriber_count = 1
+        c.save()
+        
+        response = auth_client.post(f"/api/communities/{c.id}/subscribe/")
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["message"] == "Already subscribed"
+        assert response.data["is_subscribed"] is True
+
+    def test_unsubscribe_from_community(self, auth_client, sample_user):
+        """Test unsubscribing from a community"""
+        c = Community.objects.create(creator=sample_user, name="UnsubComm", description="desc")
+        Subscription.objects.create(user=sample_user, community=c)
+        c.subscriber_count = 1
+        c.save()
+        
+        response = auth_client.delete(f"/api/communities/{c.id}/unsubscribe/")
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["message"] == "Unsubscribed"
+        assert response.data["subscriber_count"] == 0
+        assert response.data["is_subscribed"] is False
+        
+        c.refresh_from_db()
+        assert c.subscriber_count == 0
+        assert not Subscription.objects.filter(user=sample_user, community=c).exists()
+
+    def test_unsubscribe_not_subscribed(self, auth_client, sample_user):
+        """Test unsubscribing when not subscribed"""
+        c = Community.objects.create(creator=sample_user, name="UnsubComm", description="desc")
+        
+        response = auth_client.delete(f"/api/communities/{c.id}/unsubscribe/")
+        
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert "error" in response.data
+
+    def test_is_subscribed_field_in_serializer(self, auth_client, sample_user):
+        """Test that is_subscribed field shows subscription status"""
+        c = Community.objects.create(creator=sample_user, name="SubComm", description="desc")
+        
+        # Not subscribed
+        response = auth_client.get(f"/api/communities/{c.id}/")
+        assert response.data["is_subscribed"] is False
+        
+        # After subscribing
+        Subscription.objects.create(user=sample_user, community=c)
+        response = auth_client.get(f"/api/communities/{c.id}/")
+        assert response.data["is_subscribed"] is True
+
 
 @pytest.mark.django_db
 class TestPostViewSet:
@@ -144,6 +212,26 @@ class TestPostViewSet:
 
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Post.objects.count() == 0
+
+    def test_get_post_comments(self, auth_client, sample_user):
+        """Test getting comments for a specific post"""
+        c = Community.objects.create(creator=sample_user, name="PostComm", description="desc")
+        p = Post.objects.create(user=sample_user, community=c, title="Test", content="body", post_type="text")
+        
+        # Create some comments
+        Comment.objects.create(user=sample_user, post=p, content="First comment")
+        Comment.objects.create(user=sample_user, post=p, content="Second comment")
+        
+        # Create comment on different post (should not appear)
+        p2 = Post.objects.create(user=sample_user, community=c, title="Other", content="body", post_type="text")
+        Comment.objects.create(user=sample_user, post=p2, content="Other comment")
+        
+        response = auth_client.get(f"/api/posts/{p.id}/comments/")
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 2
+        assert response.data[0]["content"] == "First comment"
+        assert response.data[1]["content"] == "Second comment"
 
 
 @pytest.mark.django_db

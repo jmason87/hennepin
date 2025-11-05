@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import User, Community, Post, Comment, PostVote, CommentVote, Subscription
+from .models import User, Community, Post, Comment, PostVote, CommentVote, Subscription, Subscription
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -56,11 +56,18 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 class CommunitySerializer(serializers.ModelSerializer):
     creator = serializers.PrimaryKeyRelatedField(read_only=True)
+    is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = Community
-        fields = ['id', 'creator', 'name', 'description', 'subscriber_count', 'created_at', 'updated_at', 'deleted_at']
-        read_only_fields = ['id', 'creator', 'subscriber_count', 'created_at', 'updated_at', 'deleted_at']
+        fields = ['id', 'creator', 'name', 'description', 'subscriber_count', 'is_subscribed', 'created_at', 'updated_at', 'deleted_at']
+        read_only_fields = ['id', 'creator', 'subscriber_count', 'is_subscribed', 'created_at', 'updated_at', 'deleted_at']
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Subscription.objects.filter(user=request.user, community=obj).exists()
+        return False
 
     def create(self, validated_data):
         validated_data['creator'] = self.context['request'].user
@@ -94,7 +101,7 @@ class PostSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class CommentSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    user = UserSerializer(read_only=True)
     post = serializers.PrimaryKeyRelatedField(queryset=Post.objects.all())
     parent = serializers.PrimaryKeyRelatedField(queryset=Comment.objects.all(), required=False, allow_null=True)
 
