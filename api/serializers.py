@@ -72,7 +72,8 @@ class PostSerializer(serializers.ModelSerializer):
     community_id = serializers.PrimaryKeyRelatedField(
         queryset=Community.objects.all(),
         source='community',
-        write_only=True
+        write_only=True,
+        required=False
     )
 
     class Meta:

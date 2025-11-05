@@ -88,13 +88,20 @@ class TestCommunityViewSet:
 class TestPostViewSet:
     def test_create_post(self, auth_client, sample_user):
         c = Community.objects.create(creator=sample_user, name="PostComm", description="desc")
-        data = {"community": c.id, "title": "Hello", "content": "body", "post_type": "text"}
+        data = {"community_id": c.id, "title": "Hello", "content": "body", "post_type": "text"}
         response = auth_client.post("/api/posts/", data)
 
         assert response.status_code == status.HTTP_201_CREATED
         assert Post.objects.count() == 1
         p = Post.objects.first()
         assert p.title == "Hello"
+        # Verify nested serialization
+        assert "user" in response.data
+        assert "username" in response.data["user"]
+        assert response.data["user"]["username"] == sample_user.username
+        assert "community" in response.data
+        assert "name" in response.data["community"]
+        assert response.data["community"]["name"] == c.name
 
     def test_list_posts(self, auth_client, sample_user):
         c = Community.objects.create(creator=sample_user, name="PostComm", description="desc")
@@ -103,6 +110,11 @@ class TestPostViewSet:
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
+        # Verify nested serialization in list view
+        assert "user" in response.data[0]
+        assert "username" in response.data[0]["user"]
+        assert "community" in response.data[0]
+        assert "name" in response.data[0]["community"]
 
     def test_retrieve_post(self, auth_client, sample_user):
         c = Community.objects.create(creator=sample_user, name="PostComm", description="desc")
@@ -111,11 +123,14 @@ class TestPostViewSet:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data["title"] == p.title
+        # Verify nested serialization
+        assert isinstance(response.data["user"], dict)
+        assert isinstance(response.data["community"], dict)
 
     def test_update_post(self, auth_client, sample_user):
         c = Community.objects.create(creator=sample_user, name="PostComm", description="desc")
         p = Post.objects.create(user=sample_user, community=c, title="Old", content="body", post_type="text")
-        data = {"community": c.id, "title": "New", "content": "body", "post_type": "text"}
+        data = {"title": "New", "content": "body", "post_type": "text"}
         response = auth_client.put(f"/api/posts/{p.id}/", data)
 
         assert response.status_code == status.HTTP_200_OK
