@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
 from django.db.models import F
-from .models import User, Community, Post, Comment, PostVote
+from .models import User, Community, Post, Comment, PostVote, Subscription
 from .serializers import (
     UserSerializer,
     CommunitySerializer,
@@ -40,15 +40,59 @@ class RegisterView(generics.CreateAPIView):
         headers = self.get_success_headers(serializer.data)
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
-class CommunityList(generics.ListCreateAPIView):
+class CommunityViewSet(viewsets.ModelViewSet):
     queryset = Community.objects.all()
     serializer_class = CommunitySerializer
     permission_classes = [IsAuthenticated]
 
-class CommunityDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Community.objects.all()
-    serializer_class = CommunitySerializer
-    permission_classes = [IsAuthenticated]
+    @action(detail=True, methods=['post'])
+    def subscribe(self, request, pk=None):
+        community = self.get_object()
+        subscription, created = Subscription.objects.get_or_create(
+            user=request.user,
+            community=community
+        )
+        
+        if created:
+            # Update subscriber count
+            community.subscriber_count = F('subscriber_count') + 1
+            community.save(update_fields=['subscriber_count'])
+            community.refresh_from_db()
+            return Response({
+                'message': 'Subscribed',
+                'subscriber_count': community.subscriber_count,
+                'is_subscribed': True
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                'message': 'Already subscribed',
+                'subscriber_count': community.subscriber_count,
+                'is_subscribed': True
+            })
+
+    @action(detail=True, methods=['delete'])
+    def unsubscribe(self, request, pk=None):
+        community = self.get_object()
+        subscription = Subscription.objects.filter(
+            user=request.user,
+            community=community
+        ).first()
+        
+        if not subscription:
+            return Response({
+                'error': 'Not subscribed'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        subscription.delete()
+        community.subscriber_count = F('subscriber_count') - 1
+        community.save(update_fields=['subscriber_count'])
+        community.refresh_from_db()
+        
+        return Response({
+            'message': 'Unsubscribed',
+            'subscriber_count': community.subscriber_count,
+            'is_subscribed': False
+        })
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
@@ -119,13 +163,34 @@ class PostViewSet(viewsets.ModelViewSet):
                 'vote_count': post.vote_count,
                 'user_vote': None
             })
+    
+    @action(detail=True, methods=['get'])
+    def comments(self, request, pk=None):
+        post = self.get_object()
+        comments = Comment.objects.filter(post=post).order_by('created_at')
+        serializer = CommentSerializer(comments, many=True, context={'request': request})
+        return Response(serializer.data)
 
 class CommentList(generics.ListCreateAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
 
+    def perform_create(self, serializer):
+        comment = serializer.save()
+        # Update post comment count
+        post = comment.post
+        post.comment_count = F('comment_count') + 1
+        post.save(update_fields=['comment_count'])
+
 class CommentDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
+
+    def perform_destroy(self, instance):
+        post = instance.post
+        instance.delete()
+        # Update post comment count
+        post.comment_count = F('comment_count') - 1
+        post.save(update_fields=['comment_count'])
