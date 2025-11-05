@@ -75,11 +75,19 @@ class PostSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    user_vote = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
-        fields = ['id', 'user', 'community', 'community_id', 'title', 'content', 'post_type', 'vote_count', 'comment_count', 'created_at', 'updated_at', 'deleted_at']
-        read_only_fields = ['id', 'user', 'community', 'vote_count', 'comment_count', 'created_at', 'updated_at', 'deleted_at']
+        fields = ['id', 'user', 'community', 'community_id', 'title', 'content', 'post_type', 'vote_count', 'comment_count', 'user_vote', 'created_at', 'updated_at', 'deleted_at']
+        read_only_fields = ['id', 'user', 'community', 'vote_count', 'comment_count', 'user_vote', 'created_at', 'updated_at', 'deleted_at']
+
+    def get_user_vote(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            vote = PostVote.objects.filter(user=request.user, post=obj).first()
+            return vote.vote_value if vote else None
+        return None
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user

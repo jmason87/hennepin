@@ -1,6 +1,6 @@
 import pytest
 from rest_framework import status
-from api.models import User, Community, Post, Comment
+from api.models import User, Community, Post, Comment, PostVote
 
 @pytest.mark.django_db
 class TestUserViewSet:
@@ -226,3 +226,174 @@ class TestRegistration:
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert "password2" in resp.data
+
+
+@pytest.mark.django_db
+class TestPostVoting:
+    def test_upvote_post(self, auth_client, sample_user):
+        """Test creating an upvote on a post"""
+        community = Community.objects.create(creator=sample_user, name="TestComm", description="desc")
+        post = Post.objects.create(user=sample_user, community=community, title="Test", content="body", post_type="text")
+        
+        response = auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": 1}, format='json')
+        
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        assert response.data["message"] == "Vote created"
+        assert response.data["vote_count"] == 1
+        assert response.data["user_vote"] == 1
+        
+        post.refresh_from_db()
+        assert post.vote_count == 1
+        assert PostVote.objects.filter(user=sample_user, post=post, vote_value=1).exists()
+
+    def test_downvote_post(self, auth_client, sample_user):
+        """Test creating a downvote on a post"""
+        community = Community.objects.create(creator=sample_user, name="TestComm", description="desc")
+        post = Post.objects.create(user=sample_user, community=community, title="Test", content="body", post_type="text")
+        
+        response = auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": -1}, format='json')
+        
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["vote_count"] == -1
+        assert response.data["user_vote"] == -1
+        
+        post.refresh_from_db()
+        assert post.vote_count == -1
+
+    def test_toggle_vote_removes_it(self, auth_client, sample_user):
+        """Test clicking same vote again removes it"""
+        community = Community.objects.create(creator=sample_user, name="TestComm", description="desc")
+        post = Post.objects.create(user=sample_user, community=community, title="Test", content="body", post_type="text")
+        
+        # First vote
+        auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": 1}, format='json')
+        
+        # Toggle off
+        response = auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": 1}, format='json')
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["message"] == "Vote removed"
+        assert response.data["vote_count"] == 0
+        assert response.data["user_vote"] is None
+        
+        post.refresh_from_db()
+        assert post.vote_count == 0
+        assert not PostVote.objects.filter(user=sample_user, post=post).exists()
+
+    def test_switch_vote_from_up_to_down(self, auth_client, sample_user):
+        """Test switching from upvote to downvote"""
+        community = Community.objects.create(creator=sample_user, name="TestComm", description="desc")
+        post = Post.objects.create(user=sample_user, community=community, title="Test", content="body", post_type="text")
+        
+        # Upvote
+        auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": 1}, format='json')
+        
+        # Switch to downvote
+        response = auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": -1}, format='json')
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["message"] == "Vote updated"
+        assert response.data["vote_count"] == -1
+        assert response.data["user_vote"] == -1
+        
+        post.refresh_from_db()
+        assert post.vote_count == -1
+        assert PostVote.objects.filter(user=sample_user, post=post, vote_value=-1).exists()
+
+    def test_switch_vote_from_down_to_up(self, auth_client, sample_user):
+        """Test switching from downvote to upvote"""
+        community = Community.objects.create(creator=sample_user, name="TestComm", description="desc")
+        post = Post.objects.create(user=sample_user, community=community, title="Test", content="body", post_type="text")
+        
+        # Downvote
+        auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": -1}, format='json')
+        
+        # Switch to upvote
+        response = auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": 1}, format='json')
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["message"] == "Vote updated"
+        assert response.data["vote_count"] == 1
+        assert response.data["user_vote"] == 1
+        
+        post.refresh_from_db()
+        assert post.vote_count == 1
+
+    def test_delete_vote(self, auth_client, sample_user):
+        """Test DELETE request removes vote"""
+        community = Community.objects.create(creator=sample_user, name="TestComm", description="desc")
+        post = Post.objects.create(user=sample_user, community=community, title="Test", content="body", post_type="text")
+        
+        # Create vote
+        auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": 1}, format='json')
+        
+        # Delete vote
+        response = auth_client.delete(f"/api/posts/{post.id}/vote/")
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["message"] == "Vote removed"
+        assert response.data["vote_count"] == 0
+        assert response.data["user_vote"] is None
+        
+        post.refresh_from_db()
+        assert post.vote_count == 0
+        assert not PostVote.objects.filter(user=sample_user, post=post).exists()
+
+    def test_delete_nonexistent_vote_returns_404(self, auth_client, sample_user):
+        """Test deleting a vote that doesn't exist"""
+        community = Community.objects.create(creator=sample_user, name="TestComm", description="desc")
+        post = Post.objects.create(user=sample_user, community=community, title="Test", content="body", post_type="text")
+        
+        response = auth_client.delete(f"/api/posts/{post.id}/vote/")
+        
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert "error" in response.data
+
+    def test_invalid_vote_value_returns_400(self, auth_client, sample_user):
+        """Test invalid vote values are rejected"""
+        community = Community.objects.create(creator=sample_user, name="TestComm", description="desc")
+        post = Post.objects.create(user=sample_user, community=community, title="Test", content="body", post_type="text")
+        
+        # Test various invalid values
+        for invalid_value in [0, 2, -2, "up"]:
+            response = auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": invalid_value}, format='json')
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            assert "error" in response.data
+
+    def test_concurrent_votes_dont_lose_count(self, auth_client, sample_user):
+        """Test that F() expressions prevent race conditions"""
+        community = Community.objects.create(creator=sample_user, name="TestComm", description="desc")
+        post = Post.objects.create(user=sample_user, community=community, title="Test", content="body", post_type="text")
+        
+        # Create another user
+        user2 = User.objects.create_user(username="user2", password="pass")
+        
+        # Both users upvote
+        auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": 1}, format='json')
+        
+        # Authenticate as second user
+        auth_client.force_authenticate(user=user2)
+        auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": 1}, format='json')
+        
+        post.refresh_from_db()
+        assert post.vote_count == 2
+        assert PostVote.objects.filter(post=post).count() == 2
+
+    def test_user_vote_field_in_serializer(self, auth_client, sample_user):
+        """Test that user_vote field shows current user's vote"""
+        community = Community.objects.create(creator=sample_user, name="TestComm", description="desc")
+        post = Post.objects.create(user=sample_user, community=community, title="Test", content="body", post_type="text")
+        
+        # No vote yet
+        response = auth_client.get(f"/api/posts/{post.id}/")
+        assert response.data["user_vote"] is None
+        
+        # After upvoting
+        auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": 1}, format='json')
+        response = auth_client.get(f"/api/posts/{post.id}/")
+        assert response.data["user_vote"] == 1
+        
+        # After downvoting
+        auth_client.post(f"/api/posts/{post.id}/vote/", {"vote_value": -1}, format='json')
+        response = auth_client.get(f"/api/posts/{post.id}/")
+        assert response.data["user_vote"] == -1
