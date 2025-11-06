@@ -12,6 +12,7 @@ pytest = "*"
 pytest-django = "*"
 djangorestframework-simplejwt = "*"
 django-cors-headers = "*"
+gunicorn = "*"
 
 [dev-packages]
 

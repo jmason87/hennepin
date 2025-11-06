@@ -34,7 +34,7 @@ services:
       - "${WEB_PORT:-8000}:8000"
     volumes:
       - .:/app:delegated
-    command: ["sh", "/app/docker/entrypoint.sh"]
+    command: sh -c "python manage.py migrate --noinput && exec gunicorn app.wsgi:application --bind 0.0.0.0:8000 --workers 2"
 
 volumes:
   db_data:
