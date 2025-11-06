@@ -181,7 +181,11 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # Security settings for production
+# Security settings for production
 if not DEBUG:
+    # Trust Fly.io proxy headers
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # Now these are safe to enable
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
